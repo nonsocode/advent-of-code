@@ -2,9 +2,15 @@
   "name": "advent",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "license": "MIT",
   "dependencies": {
+    "commander": "^8.3.0",
+    "inquirer": "^8.2.0",
     "typescript": "^4.5.2",
     "vite": "^2.6.14"
+  },
+  "scripts": {
+    "solve": "node --experimental-json-modules src/index.js"
   }
 }

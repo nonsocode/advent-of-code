@@ -1,12 +1,4 @@
 const input = [];
-  
-  const countIndividualGreater = (input) => {
-  let greater = 0;
-  for (let i = 1; i < input.length; i++) {
-    if (input[i - 1] < input[i]) greater++;
-  }
-  return greater;
-};
 
 const createWindowSummer = (input, size) => (start) => {
   let sum = 0;
