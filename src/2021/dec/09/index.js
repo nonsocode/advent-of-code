@@ -96,6 +96,12 @@ const createQueue = (arr = []) => {
   return {
     enqueueAll,
     dequeue,
+    work(fn) {
+      let current;
+      while ((current = dequeue())) {
+        fn(current, { enqueue, dequeue });
+      }
+    },
   };
 };
 const part2 = () => {
@@ -113,15 +119,14 @@ const part2 = () => {
       const startItems = adjacents.filter(notNine);
       basin.addAll(startItems);
       const queue = createQueue(startItems);
-      let current;
-      while ((current = queue.dequeue())) {
+      queue.work((current) => {
         const adjacents = adjacentGetter(current.index, false)
           .filter(notNine)
           .filter((adjacent) => !basin.has(adjacent))
           .filter((adjacent) => adjacent.value > current.value);
         basin.addAll(adjacents);
         queue.enqueueAll(adjacents);
-      }
+      });
 
       basins.push(basin);
     });
