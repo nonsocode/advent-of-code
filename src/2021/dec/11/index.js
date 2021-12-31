@@ -54,10 +54,9 @@ const createQueue = () => {
 
 const solve = async (limit = Infinity) => {
   const grid = await parse();
-  const getAdjacents = createAdjacentGetter(grid.length, grid[0].length);
-  const gridSize = grid.length * grid[0].length;
-  let iteration = 0;
-  let total = 0;
+  let [iteration, total] = [0, 0];
+  const [height, width] = [grid.length, grid[0].length];
+  const getAdjacents = createAdjacentGetter(height, width);
   while (++iteration <= limit) {
     const flashed = new Set();
     const queue = createQueue();
@@ -80,7 +79,7 @@ const solve = async (limit = Infinity) => {
         });
       }
     }
-    if (limit === Infinity && flashed.size === gridSize) return iteration;
+    if (limit === Infinity && flashed.size === width * height) return iteration;
     total += flashed.size;
   }
   return total;
@@ -101,4 +100,4 @@ const printGrid = (grid) => {
     console.log(string, ...cellStyles);
   }
 };
-console.log(await part2());
+console.log(await part2(), await part1());
