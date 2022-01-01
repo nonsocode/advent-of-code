@@ -30,7 +30,7 @@ const fold = (hashes, direction, fulcrum) => {
 
 const solve = async (limit) => {
   let { hashes, instructions } = await parse();
-  if (limit) instructions = [instructions.slice(0, 1)];
+  if (limit) instructions = [...instructions.slice(0, limit)];
   instructions.forEach(([direction, fulcrum]) => {
     hashes = fold(hashes, direction, fulcrum);
   });
@@ -44,23 +44,26 @@ const buildSparseGrid = (hashes) =>
     return grid;
   }, []);
 
-const draw = (hashes) => {
+const getDrawing = (hashes) => {
   const sparseGrid = buildSparseGrid(hashes);
+  let lines = [];
+  const DOT = " ";
+  const HASH = "#";
   const width = Math.max(...sparseGrid.map((row) => row.length));
   for (let row of sparseGrid) {
     if (!row) {
-      console.log(" ".repeat(width));
+      lines.push(DOT.repeat(width));
       continue;
     }
-    let str = ""; 
+    let str = "";
     for (let val of row) {
-      str += val ? "#" : " ";
+      str += val ? HASH : DOT;
     }
-    console.log(str);
+    lines.push(str);
   }
+  return lines.join("\n");
 };
-const part1 = () => solve(1).length;
-const part2 = async () => {
-  draw(await solve());
-};
+const part1 = async () => (await solve(1)).length;
+const part2 = async () => getDrawing(await solve());
+console.log(await part1())
 console.log(await part2());
