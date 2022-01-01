@@ -38,9 +38,9 @@ const solve = async (limit) => {
 };
 const buildSparseGrid = (hashes) =>
   hashes.reduce((grid, hash) => {
-    const index = toIndex(hash);
-    grid[index.y] ??= [];
-    grid[index.y][index.x] = true;
+    const { x, y } = toIndex(hash);
+    grid[y] ??= [];
+    grid[y][x] = true;
     return grid;
   }, []);
 
@@ -65,5 +65,5 @@ const getDrawing = (hashes) => {
 };
 const part1 = async () => (await solve(1)).length;
 const part2 = async () => getDrawing(await solve());
-console.log(await part1())
+console.log(await part1());
 console.log(await part2());
