@@ -1,16 +1,15 @@
 import { readFile } from "fs/promises";
 import { blue, green } from "../../../log.js";
-import { time } from "../../../timing.js";
 const parse = async () => {
   const string = (
     await readFile(new URL("input.txt", import.meta.url))
   ).toString();
   return string.split("\n").map((line) => line.split("").map(Number));
 };
+const dimensions = (grid) => [grid.length, grid[0].length];
 const estimateDistance = ([i, j], h, w) => h - 1 - i + (w - 1 - j);
 const compileGrid = (grid) => {
-  const height = grid.length,
-    width = grid[0].length;
+  const [height, width] = dimensions(grid);
   return grid.map((line, i) =>
     line.map((value, j) => {
       const isStart = i === 0 && j === 0;
@@ -35,21 +34,20 @@ const compileGrid = (grid) => {
 
 const createAdjacentGetter =
   (grid) =>
-  ([i, j]) =>
-    [
+  ([i, j]) => {
+    const [height, width] = dimensions(grid);
+    return [
       { check: (i, j) => j > 0, getIndex: (i, j) => [i, j - 1] },
-      {
-        check: (i, j) => j < grid[0].length - 1,
-        getIndex: (i, j) => [i, j + 1],
-      }, //right
+      { check: (i, j) => j < width - 1, getIndex: (i, j) => [i, j + 1] }, //right
       { check: (i, j) => i > 0, getIndex: (i, j) => [i - 1, j] },
-      { check: (i, j) => i < grid.length - 1, getIndex: (i, j) => [i + 1, j] },
+      { check: (i, j) => i < height - 1, getIndex: (i, j) => [i + 1, j] },
     ]
       .filter(({ check }) => check(i, j))
       .map(({ getIndex }) => {
         const [newi, newj] = getIndex(i, j);
         return grid[newi][newj];
       });
+  };
 const findCandidate = (set) => {
   if (set.size === 0) return;
   const arr = [...set];
@@ -121,7 +119,7 @@ const part1 = async () => {
   return leastRisk;
 };
 const part2 = async () => {
-  const compiled =  compileGrid(expandGrid(await parse(), 5));
+  const compiled = compileGrid(expandGrid(await parse(), 5));
   const leastRisk = computeShortestPath(compiled);
   return leastRisk;
 };
