@@ -1,9 +1,8 @@
-const parse = (input) => input.split('\n')
+export const parse = (input) => input.split('\n')
 
 export const solution1 = (input) => {
-  const parsedInput = parse(input);
   let [max, current] = [0, 0];
-  for (let str of parsedInput) {
+  for (let str of input) {
     if (str !== "") {
       current += parseInt(str, 10)
       continue;
@@ -15,10 +14,9 @@ export const solution1 = (input) => {
 }
 
 export const solution2 = (input) => {
-  const parsedInput = parse(input)
   const top = new Top(3)
   let current = 0
-  for (let str of parsedInput) {
+  for (let str of input) {
     if (str !== "") {
       current += parseInt(str, 10)
       continue;

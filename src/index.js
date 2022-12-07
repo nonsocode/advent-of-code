@@ -39,7 +39,8 @@ try {
 for (const n of solutions) {
   if (`solution${n}` in module && typeof module[`solution${n}` === 'function']) {
     try {
-      const answer = await module[`solution${n}`](inputData)
+      const parsedInput = await module.parse(inputData)
+      const answer = await module[`solution${n}`](parsedInput)
       console.group(`Solution ${n}`)
       console.log(answer)
       console.groupEnd(`Solution ${n}`)
