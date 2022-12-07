@@ -51,7 +51,7 @@ for (const n of solutions) {
 
 function getInputUrl(online, inputFileName) {
   return online 
-    ? new URL(`https://adventofcode.com/${year}/day/${day}/input`)
+    ? new URL(`https://adventofcode.com/${year}/day/${parseInt(day, 10)}/input`)
     : new URL(inputFileName, `${import.meta.url}/../${year}/${day}/`)
 }
 
@@ -61,6 +61,6 @@ async function getInputData(online, inputFileName) {
     return fetch(url)
       .then(res => res.text())
   } else {
-    return await readFile(url).toString()
+    return (await readFile(url)).toString()
   }
 }
