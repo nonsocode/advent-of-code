@@ -1,28 +1,66 @@
 import { Command, Option, Argument } from "commander";
+import { readFile } from "fs/promises";
+import fetch from "node-fetch";
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   month: "short",
   day: "2-digit",
 });
+const parts = dateFormat.formatToParts(new Date)
+const defaultDate = parts.find(({ type }) => type === 'day').value
+const defaultYear = parts.find(({ type }) => type === 'year').value
 const program = new Command();
 program
-  .argument("<year>", "Year in 4 digits")
-  .argument("<month>", "Month in short form e.g jan")
-  .argument("<date>", "Date in 2 digits")
-  .option(
-    new Option(
-      "-p, --parts [part]",
-      "What part of the solution should be calculated."
-    )
-      .choices(["1", "2", "all"])
-      .default("all")
-  )
-  .action(4);
-
+  .option("-a, --day [day]", "Date from 1 to 31", d => d.padStart(2, '0'), defaultDate)
+  .option("-y, --year [year]", "Year of advent", defaultYear)
+  .option("-s, --solution [solution]", "Solution to run", "all")
+  .option("-o, --online", "Use online input file", false)
+  .option("-i, --input-fileName [fileName]", "Input file name", "input.txt")
 program.parse(process.argv);
 
-const options = program.opts();
-if (options.debug) console.log(options);
-console.log("pizza details:");
-if (options.small) console.log("- small pizza size");
-if (options.pizzaType) console.log(`- ${options.pizzaType}`);
+let { day, year, solution, inputFileName, online } = program.opts();
+const solutions = Number.isNaN(parseInt(solution, 10)) ? [1, 2] : parseInt(solution, 10)
+let module, inputData;
+
+try {
+  module = await import(`./${year}/${day}/index.js`)
+} catch (e) {
+  console.error(`Could not import solutions for ${year}/${day}`)
+  process.exit(1)
+}
+
+try {
+  inputData = await getInputData(online, inputFileName)
+} catch (e) { 
+  console.error(`Could not read input file for ${year}/${day}`)
+  process.exit(1)
+}
+
+for (const n of solutions) {
+  if (`solution${n}` in module && typeof module[`solution${n}` === 'function']) {
+    try {
+      const answer = await module[`solution${n}`](inputData)
+      console.group(`Solution ${n}`)
+      console.log(answer)
+      console.groupEnd(`Solution ${n}`)
+    } catch (e) {
+      console.warn(`Could not obtain solution ${n}:`, e)
+    }
+  }
+}
+
+function getInputUrl(online, inputFileName) {
+  return online 
+    ? new URL(`https://adventofcode.com/${year}/day/${day}/input`)
+    : new URL(inputFileName, `${import.meta.url}/../${year}/${day}/`)
+}
+
+async function getInputData(online, inputFileName) {
+  const url = getInputUrl(online, inputFileName)
+  if (online) {
+    return fetch(url)
+      .then(res => res.text())
+  } else {
+    return await readFile(url).toString()
+  }
+}
