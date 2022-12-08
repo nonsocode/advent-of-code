@@ -123,7 +123,7 @@ async function pathExists(path) {
 }
 
 async function getInputData({ year, day }) {
-  return (await readFile(new URL(inputFileName, `${import.meta.url}/../${year}/${day}/`))).toString()
+  return (await readFile(new URL("input.txt", `${import.meta.url}/../${year}/${day}/`))).toString()
 }
 
 
