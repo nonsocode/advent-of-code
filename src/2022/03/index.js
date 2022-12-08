@@ -41,7 +41,6 @@ export const solution2 = (input) => {
     start = end
     end = new Set()
     if(i % 3 == 2) {
-      console.log(start)
       const code = [...start][0].charCodeAt(0)
       total += (code >= 97 ? code - 96 : code - 38)
     }
