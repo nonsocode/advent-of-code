@@ -2,7 +2,7 @@
 export const parse = (input) => {
   return input.split('\n');
 }
-
+// should probably use bitwise operations to reduce memory usage
 export const solution1 = (input) => {
   return input.reduce((total, str) => {
     const mid = Math.floor(str.length / 2)
