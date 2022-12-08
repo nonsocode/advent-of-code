@@ -5,17 +5,18 @@
   "type": "module",
   "license": "MIT",
   "dependencies": {
-    "commander": "^9.4.1",
-    "inquirer": "^8.2.5",
-    "node-fetch": "^3.3.0",
-    "nodemon": "^2.0.20",
-    "typescript": "^4.5.2",
-    "vite": "^2.6.14"
   },
   "scripts": {
     "solve": "node --experimental-json-modules src/index.js solve",
     "scaffold": "node --experimental-json-modules src/index.js scaffold",
     "watch": "nodemon src/index.js solve",
     "start": "npm run scaffold && npm run watch"
+  },
+  "devDependencies": {
+    "commander": "^9.4.1",
+    "inquirer": "^8.2.5",
+    "node-fetch": "^3.3.0",
+    "nodemon": "^2.0.20",
+    "dotenv": "^16.0.3"
   }
 }

@@ -1,10 +1,13 @@
+import dotenv from 'dotenv'
+dotenv.config()
 import { Command, Option } from "commander";
-import { readFile, access, mkdir, writeFile } from "fs/promises";
+import { readFile, access, mkdir, writeFile, rm } from "fs/promises";
 import inquirer from "inquirer";
 import fetch from "node-fetch";
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+const SESSION_KEY = process.env.AOC_SESSION
+const INPUT_CACHE = "/tmp/aoc/inputs"
 const prompt = inquirer.createPromptModule()
 const dateFormat = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
@@ -34,9 +37,7 @@ program
   .addOption(dayOption)
   .addOption(yearOption)
   .option("-s, --solution [solution]", "Solution to run", "all")
-  .option("-o, --online", "Use online input file", false)
-  .option("-i, --input-fileName [fileName]", "Input file name", "input.txt")
-  .action(async ({ day, year, solution, inputFileName, online }) => {
+  .action(async ({ day, year, solution }) => {
     const solutions = Number.isNaN(parseInt(solution, 10)) ? [1, 2] : parseInt(solution, 10)
     let module, inputData;
 
@@ -48,7 +49,7 @@ program
     }
 
     try {
-      inputData = await getInputData({ online, inputFileName, year, day })
+      inputData = await getInputData({ year, day })
     } catch (e) {
       console.error(`Could not read input file for ${year}/${day}`, e)
       process.exit(1)
@@ -96,11 +97,18 @@ program.command('scaffold')
     }
     await Promise.all([
       writeFile(`${dir}/index.js`, getDefaultJs()),
-      writeFile(`${dir}/input.txt`, getDefaultInput())
+      writeFile(`${dir}/input.txt`, await getDefaultInput({ day, year }))
     ])
     console.group("Created")
     files.forEach(file => console.log(`${dir}/${file}`))
     console.groupEnd("Created")
+  })
+
+  program.command('cache-clear')
+  .action(async() => {
+    if(await pathExists(INPUT_CACHE)) {
+      await rm(INPUT_CACHE, { recursive: true})
+    }
   })
 
 program.parse(process.argv);
@@ -113,21 +121,11 @@ async function pathExists(path) {
     return false
   }
 }
-function getInputUrl({ online, inputFileName, year, day }) {
-  return online
-    ? new URL(`https://adventofcode.com/${year}/day/${parseInt(day, 10)}/input`)
-    : new URL(inputFileName, `${import.meta.url}/../${year}/${day}/`)
+
+async function getInputData({ year, day }) {
+  return (await readFile(new URL(inputFileName, `${import.meta.url}/../${year}/${day}/`))).toString()
 }
 
-async function getInputData({ online, inputFileName, year, day }) {
-  const url = getInputUrl({ online, inputFileName, year, day })
-  if (online) {
-    return fetch(url)
-      .then(res => res.text())
-  } else {
-    return (await readFile(url)).toString()
-  }
-}
 
 function dirname() {
   return path.dirname(fileURLToPath(import.meta.url))
@@ -150,6 +148,19 @@ export const solution2 = (input) => {
 `);
 }
 
-function getDefaultInput() {
-  return ""
+async function getDefaultInput({ day, year }) {
+  if (!await pathExists(INPUT_CACHE)) {
+    mkdir(INPUT_CACHE, { recursive: true })
+  }
+  if (await pathExists(`${INPUT_CACHE}/${year}${day}.txt`)) {
+    return (await readFile(`${INPUT_CACHE}/${year}${day}.txt`)).toString()
+  }
+  const data = await fetch(`https://adventofcode.com/${year}/day/${parseInt(day, 10)}/input`, {
+    headers: {
+      cookie: `session=${SESSION_KEY}`
+    }
+  })
+    .then(res => res.text())
+  writeFile(`${INPUT_CACHE}/${year}${day}.txt`, data)
+  return data
 }
