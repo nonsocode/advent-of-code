@@ -6,6 +6,7 @@ import inquirer from "inquirer";
 import fetch from "node-fetch";
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { watch } from 'fs/promises'
 const SESSION_KEY = process.env.AOC_SESSION
 const INPUT_CACHE = "/tmp/aoc/inputs"
 const prompt = inquirer.createPromptModule()
@@ -37,38 +38,7 @@ program
   .addOption(dayOption)
   .addOption(yearOption)
   .option("-s, --solution [solution]", "Solution to run", "all")
-  .action(async ({ day, year, solution }) => {
-    const solutions = Number.isNaN(parseInt(solution, 10)) ? [1, 2] : parseInt(solution, 10)
-    let module, inputData;
-
-    try {
-      module = await import(`./${year}/${day}/index.js`)
-    } catch (e) {
-      console.error(`Could not import solutions for ${year}/${day}`)
-      process.exit(1)
-    }
-
-    try {
-      inputData = await getInputData({ year, day })
-    } catch (e) {
-      console.error(`Could not read input file for ${year}/${day}`, e)
-      process.exit(1)
-    }
-
-    for (const n of solutions) {
-      if (`solution${n}` in module && typeof module[`solution${n}` === 'function']) {
-        try {
-          const parsedInput = await module.parse(inputData)
-          const answer = await module[`solution${n}`](parsedInput)
-          console.group(`Solution ${n}`)
-          console.log(answer)
-          console.groupEnd(`Solution ${n}`)
-        } catch (e) {
-          console.warn(`Could not obtain solution ${n}:`, e)
-        }
-      }
-    }
-  })
+  .action(solve)
 
 
 program.command('scaffold')
@@ -76,38 +46,32 @@ program.command('scaffold')
   .addOption(dayOption)
   .option('-f, --force', "Forces the creation of files even if the directory is not empty")
   .addOption(yearOption)
-  .action(async ({ day, year, force }) => {
-    const dir = `${dirname()}/${year}/${day}`
-    const files = [`index.js`, 'input.txt']
-    if (await pathExists(dir)) {
-      const existences = await Promise.all(files.map(file => pathExists(`${dir}/${file}`)))
-      if (existences.some(i => i) && !force) {
-        const answers = await prompt([
-          {
-            type: 'confirm',
-            name: "force",
-            message: `The folder ${dir} already contains advent files.\nDo you want to override?`,
-            default: false
-          }
-        ])
-        if (!answers.force) return console.log('No changes made');
-      }
-    } else {
-      await mkdir(dir);
+  .action(scaffold)
+
+program.command('cache-clear')
+  .action(async () => {
+    if (await pathExists(INPUT_CACHE)) {
+      await rm(INPUT_CACHE, { recursive: true })
     }
-    await Promise.all([
-      writeFile(`${dir}/index.js`, getDefaultJs()),
-      writeFile(`${dir}/input.txt`, await getDefaultInput({ day, year }))
-    ])
-    console.group("Created")
-    files.forEach(file => console.log(`${dir}/${file}`))
-    console.groupEnd("Created")
   })
 
-  program.command('cache-clear')
-  .action(async() => {
-    if(await pathExists(INPUT_CACHE)) {
-      await rm(INPUT_CACHE, { recursive: true})
+program
+  .command('start')
+  .description('Starts a day\'s solution in watch mode and optionally scaffolds the solution')
+  .addOption(dayOption)
+  .addOption(yearOption)
+  .action(async ({ day, year }) => {
+    await scaffold({ day, year })
+    async function run() {
+      await solve({day, year, solution: 'all'})
+      console.log('-'.repeat(Math.max(10, process.stdout.columns / 2)))
+    }
+    await run()
+    const watcher = watch(new URL(getBaseDir({year, day})), {
+      recursive: true
+    })
+    for await (const event of watcher) {
+      await run()
     }
   })
 
@@ -121,9 +85,11 @@ async function pathExists(path) {
     return false
   }
 }
-
+function getBaseDir({ year, day }) {
+  return `${import.meta.url}/../${year}/${day}/`
+}
 async function getInputData({ year, day }) {
-  return (await readFile(new URL("input.txt", `${import.meta.url}/../${year}/${day}/`))).toString()
+  return (await readFile(new URL("input.txt", getBaseDir({ year, day })))).toString()
 }
 
 
@@ -163,4 +129,66 @@ async function getDefaultInput({ day, year }) {
     .then(res => res.text())
   writeFile(`${INPUT_CACHE}/${year}${day}.txt`, data)
   return data
+}
+
+let bust = 0
+async function solve({ day, year, solution }) {
+  const solutions = Number.isNaN(parseInt(solution, 10)) ? [1, 2] : parseInt(solution, 10)
+  let module, inputData;
+
+  try {
+    module = await import(`./${year}/${day}/index.js?${bust++}`)
+  } catch (e) {
+    console.error(`Could not import solutions for ${year}/${day}`)
+    process.exit(1)
+  }
+
+  try {
+    inputData = await getInputData({ year, day })
+  } catch (e) {
+    console.error(`Could not read input file for ${year}/${day}`, e)
+    process.exit(1)
+  }
+
+  for (const n of solutions) {
+    if (`solution${n}` in module && typeof module[`solution${n}` === 'function']) {
+      try {
+        const parsedInput = await module.parse(inputData)
+        const answer = await module[`solution${n}`](parsedInput)
+        console.group(`Solution ${n}`)
+        console.log(answer)
+        console.groupEnd(`Solution ${n}`)
+      } catch (e) {
+        console.warn(`Could not obtain solution ${n}:`, e)
+      }
+    }
+  }
+}
+
+async function scaffold({ day, year, force }) {
+  const dir = `${dirname()}/${year}/${day}`
+  const files = [`index.js`, 'input.txt']
+  if (await pathExists(dir)) {
+    const existences = await Promise.all(files.map(file => pathExists(`${dir}/${file}`)))
+    if (existences.some(i => i) && !force) {
+      const answers = await prompt([
+        {
+          type: 'confirm',
+          name: "force",
+          message: `The folder ${dir} already contains advent files.\nDo you want to override?`,
+          default: false
+        }
+      ])
+      if (!answers.force) return console.log('No changes made');
+    }
+  } else {
+    await mkdir(dir);
+  }
+  await Promise.all([
+    writeFile(`${dir}/index.js`, getDefaultJs()),
+    writeFile(`${dir}/input.txt`, await getDefaultInput({ day, year }))
+  ])
+  console.group("Created")
+  files.forEach(file => console.log(`${dir}/${file}`))
+  console.groupEnd("Created")
 }
