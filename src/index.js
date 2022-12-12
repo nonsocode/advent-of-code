@@ -7,6 +7,7 @@ import fetch from "node-fetch";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { watch } from 'fs/promises'
+import { emitKeypressEvents } from 'readline';
 const SESSION_KEY = process.env.AOC_SESSION
 const INPUT_CACHE = "/tmp/aoc/inputs"
 const prompt = inquirer.createPromptModule()
@@ -38,7 +39,13 @@ program
   .addOption(dayOption)
   .addOption(yearOption)
   .option("-s, --solution [solution]", "Solution to run", "all")
-  .action(solve)
+  .action(async (options) => {
+    try {
+      await solve(options)
+    } catch {
+      process.exit(1)
+    }
+  })
 
 
 program.command('scaffold')
@@ -63,12 +70,33 @@ program
   .action(async ({ day, year }) => {
     await scaffold({ day, year })
     async function run() {
-      await solve({day, year, solution: 'all'})
+      try {
+        await solve({ day, year, solution: 'all' })
+      } catch (e) {
+        console.error(e)
+      }
       console.log('-'.repeat(Math.max(10, process.stdout.columns / 2)))
     }
     await run()
-    const watcher = watch(new URL(getBaseDir({year, day})), {
+    const watcher = watch(new URL(getBaseDir({ year, day })), {
       recursive: true
+    })
+    emitKeypressEvents(process.stdin)
+    process.stdin.setRawMode(true);
+    process.stdin.resume()
+
+
+    process.stdin.on('keypress', async (_, { name, ctrl }) => {
+      switch (true) {
+        case ctrl && name === 'c': {
+          console.log(`^C`)
+          process.exit(0)
+        }
+        case name === 'r':
+          await run();
+          break;
+        default:
+      }
     })
     for await (const event of watcher) {
       await run()
@@ -140,14 +168,14 @@ async function solve({ day, year, solution }) {
     module = await import(`./${year}/${day}/index.js?${bust++}`)
   } catch (e) {
     console.error(`Could not import solutions for ${year}/${day}`)
-    process.exit(1)
+    throw e
   }
 
   try {
     inputData = await getInputData({ year, day })
   } catch (e) {
     console.error(`Could not read input file for ${year}/${day}`, e)
-    process.exit(1)
+    throw e
   }
 
   for (const n of solutions) {
