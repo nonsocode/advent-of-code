@@ -182,8 +182,8 @@ async function solve({ day, year, solution }) {
     if (`solution${n}` in module && typeof module[`solution${n}` === 'function']) {
       try {
         const parsedInput = await module.parse(inputData)
-        const answer = await module[`solution${n}`](parsedInput)
         console.group(`Solution ${n}`)
+        const answer = await module[`solution${n}`](parsedInput)
         console.log(answer)
         console.groupEnd(`Solution ${n}`)
       } catch (e) {
